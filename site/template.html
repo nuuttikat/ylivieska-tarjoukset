@@ -68,6 +68,17 @@ select{font:inherit;padding:10px 12px;border-radius:10px;border:1px solid var(--
 .save{font:inherit;font-weight:600;padding:10px 16px;border-radius:8px;border:0;background:var(--chip-on);color:var(--chip-on-ink);cursor:pointer}
 .save:disabled{opacity:.6;cursor:progress}
 .formnote{grid-column:1/-1;margin:0;font-size:13px;color:var(--muted);min-height:1.2em}
+.watch{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:10px 14px;margin-block:4px 10px}
+.watch summary{cursor:pointer;font-weight:600}
+.watch summary .n{display:inline-block;margin-left:6px;background:var(--sale);color:#fff;border-radius:999px;font-size:12px;padding:1px 8px;font-variant-numeric:tabular-nums}
+.wlist{list-style:none;margin:10px 0 0;padding:0;display:flex;flex-wrap:wrap;gap:8px}
+.wlist li{background:var(--chip);border-radius:999px;padding:5px 6px 5px 12px;display:inline-flex;gap:8px;align-items:center;font-size:14px}
+.wlist li.mail{background:transparent;border:1px dashed var(--line)}
+.wlist button{font:inherit;border:0;background:none;color:var(--muted);cursor:pointer;padding:0 4px;font-size:16px;line-height:1}
+.wsub{font-size:13px;color:var(--muted);margin:10px 0 0}
+.wsub a{color:inherit}
+.card.hit{outline:3px solid var(--sale);outline-offset:-1px}
+.hitbadge{color:var(--sale);font-weight:700}
 .del{font:inherit;font-size:12px;border:0;background:none;color:var(--muted);text-decoration:underline;cursor:pointer;padding:0}
 @media (max-width:520px){.price{font-size:34px}.grid{grid-template-columns:1fr 1fr;gap:10px}.name{font-size:14px}}
 @media (max-width:360px){.grid{grid-template-columns:1fr}}
@@ -96,6 +107,18 @@ select{font:inherit;padding:10px 12px;border-radius:10px;border:1px solid var(--
 
 <main class="wrap">
   <div class="meta"><span id="count"></span><span id="fetched"></span></div>
+  <details class="watch" id="watchBox">
+    <summary>Hintavahdit<span class="n" id="watchHits" hidden></span></summary>
+    <form id="watchForm" class="addform" autocomplete="off">
+      <label>Tuote tai merkki<input name="q" required maxlength="60" placeholder="esim. löfberg"></label>
+      <label>Hinta enintään €<input name="max" inputmode="decimal" maxlength="8" placeholder="esim. 5"></label>
+      <button type="submit" class="save">Lisää vahti</button>
+      <p class="formnote" id="watchNote" role="status"></p>
+    </form>
+    <ul class="wlist" id="watchList"></ul>
+    <p class="wsub" id="watchOnlyRow" hidden><button type="button" class="chip" id="watchOnly" aria-pressed="false">Näytä vain vahtien osumat</button></p>
+    <p class="wsub" id="mailWatches"></p>
+  </details>
   <details class="add" id="addBox" hidden>
     <summary>Lisää tarjous käsin</summary>
     <form id="addForm" class="addform" autocomplete="off">
@@ -184,8 +207,9 @@ function card(o) {
     ? `<div class="price">${fmt(o.price).replace(/,(\d\d)$/, ",<small>$1</small>")}<small>€</small></div>`
     : `<div class="price none">${o.pct ? "−" + o.pct + " %" : "Tarjous"}</div>`;
   const name = o.url ? `<a href="${esc(o.url)}" target="_blank" rel="noopener">${esc(o.name)}</a>` : esc(o.name);
-  return `<article class="card">
-    <div class="head"><span class="store">${esc(o.store)}</span><span>${esc(o.cat)}</span></div>
+  const hit = isHit(o);
+  return `<article class="card${hit ? " hit" : ""}">
+    <div class="head"><span class="store">${esc(o.store)}</span><span>${hit ? '<span class="hitbadge">Vahti</span>' : esc(o.cat)}</span></div>
     <div class="name">${name}</div>
     <div class="tag">
       <div>${priceHtml}${o.unit ? `<div class="unit">${esc(o.unit)}</div>` : ""}</div>
@@ -197,7 +221,8 @@ function card(o) {
 }
 function render() {
   const words = state.q.trim().toLowerCase().split(/\s+/).filter(Boolean);
-  let list = offers.filter(o => state.stores.has(o.store) && (!state.cat || o.cat === state.cat) && words.every(w => o.key.includes(w)));
+  let list = offers.filter(o => state.stores.has(o.store) && (!state.cat || o.cat === state.cat) && words.every(w => o.key.includes(w)) && (!state.watchOnly || isHit(o)));
+  renderWatchCount();
   if (state.sort === "pct") list.sort((a, b) => (b.pct || 0) - (a.pct || 0) || a.name.localeCompare(b.name, "fi"));
   if (state.sort === "low") list.sort((a, b) => (a.price ?? 1e9) - (b.price ?? 1e9));
   if (state.sort === "az") list.sort((a, b) => a.name.localeCompare(b.name, "fi"));
@@ -208,13 +233,58 @@ function render() {
   $("more").hidden = left <= 0;
   if (left > 0) $("more").textContent = "Näytä lisää (" + left + " jäljellä)";
 }
+// Price alerts. Your own alerts live in this browser; email alerts come from site/data/watches.json in the repository.
+const norm = s => String(s || "").toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g, "");
+let watches = [];
+try { watches = JSON.parse(localStorage.getItem("ylv-watches") || "[]").filter(w => w && typeof w.q === "string"); } catch (e) {}
+const saveWatches = () => { try { localStorage.setItem("ylv-watches", JSON.stringify(watches)); } catch (e) {} };
+const MAIL_WATCHES = (DATA.watches || []).filter(w => w && typeof w.q === "string");
+function matches(w, o) {
+  const name = norm(o.name + " " + o.store);
+  return norm(w.q).split(/\s+/).filter(Boolean).every(x => name.includes(x)) && (!w.max || (o.price && o.price <= w.max));
+}
+function isHit(o) { return watches.some(w => matches(w, o)); }
+function renderWatchCount() {
+  const n = watches.length ? offers.filter(isHit).length : 0;
+  $("watchHits").hidden = !n; $("watchHits").textContent = n;
+  $("watchOnlyRow").hidden = !watches.length;
+}
+function renderWatches() {
+  $("watchList").innerHTML = watches.map((w, i) => {
+    const n = offers.filter(o => matches(w, o)).length;
+    return `<li>${esc(w.q)}${w.max ? " alle " + fmt(w.max) + " €" : ""} <strong>${n}</strong><button type="button" data-unwatch="${i}" aria-label="Poista vahti ${esc(w.q)}">×</button></li>`;
+  }).join("");
+  $("mailWatches").innerHTML = (MAIL_WATCHES.length
+    ? "Sähköpostivahdit: " + MAIL_WATCHES.map(w => `${esc(w.q)}${w.max ? " alle " + fmt(w.max) + " €" : ""}`).join(", ") + ". "
+    : "") + 'Sähköposti lähtee, kun tarjoukset päivittyvät. <a href="https://github.com/nuuttikat/ylivieska-tarjoukset/edit/main/site/data/watches.json" target="_blank" rel="noopener">Muokkaa sähköpostivahteja</a>';
+}
+$("watchForm").addEventListener("submit", e => {
+  e.preventDefault();
+  const f = e.target, q = f.q.value.trim().slice(0, 60);
+  const max = Number(String(f.max.value).replace(",", ".").replace(/[^0-9.]/g, "")) || null;
+  if (!q) return;
+  watches.push({q, max: max ? Math.round(max * 100) / 100 : null});
+  saveWatches(); f.q.value = ""; f.max.value = "";
+  const n = offers.filter(o => matches(watches[watches.length - 1], o)).length;
+  $("watchNote").textContent = n ? "Vahti löysi " + n + " tarjousta. Ne näkyvät punaisella reunuksella." : "Ei osumia juuri nyt. Vahti näyttää osumat, kun tarjoukset päivittyvät.";
+  renderWatches(); render();
+});
+$("watchList").addEventListener("click", e => {
+  const b = e.target.closest("[data-unwatch]"); if (!b) return;
+  watches.splice(Number(b.dataset.unwatch), 1); saveWatches();
+  if (!watches.length) { state.watchOnly = false; $("watchOnly").setAttribute("aria-pressed", "false"); }
+  renderWatches(); render();
+});
+$("watchOnly").addEventListener("click", () => {
+  state.watchOnly = !state.watchOnly; $("watchOnly").setAttribute("aria-pressed", String(state.watchOnly)); state.limit = PAGE; render();
+});
 function day(iso) { const d = new Date(iso); return isNaN(d) ? "" : d.toLocaleDateString("fi-FI", {weekday:"short", day:"numeric", month:"numeric", year:"numeric"}); }
 $("fetched").textContent = "Hinnat haettu " + day(DATA.fetched) + ". Tarkista hinta kaupassa.";
 function renderSources() {
   $("sources").innerHTML = [...stores, ...PENDING].map(s => `<li><strong>${esc(s)}</strong>${storeCount[s] ? " (" + storeCount[s] + ")" : ""}: ${esc(SOURCE_NOTES[s] || "Lisätty käsin.")}</li>`).join("");
   $("storeList").innerHTML = stores.map(s => `<option value="${esc(s)}">`).join("");
 }
-function refresh() { recount(); renderStores(); renderCats(); renderSources(); render(); }
+function refresh() { recount(); renderStores(); renderCats(); renderSources(); renderWatches(); render(); }
 $("more").addEventListener("click", () => { state.limit += PAGE; render(); });
 $("q").addEventListener("input", e => { state.q = e.target.value; state.limit = PAGE; render(); });
 $("sort").value = state.sort;

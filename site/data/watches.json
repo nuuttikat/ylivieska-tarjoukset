@@ -1,0 +1,6 @@
+{
+  "_ohje": "Sähköpostivahdit. Lisää rivi muotoa {\"q\": \"hakusana\", \"max\": 5.0}. max on hinta euroina (voi jättää pois). Sähköposti lähtee osoitteisiin, jotka on tallennettu GitHubin salaisuuteen ALERT_TO.",
+  "watches": [
+    {"q": "löfberg", "max": 5.0}
+  ]
+}

@@ -6,6 +6,8 @@ on:
   workflow_dispatch: {}
   push:
     branches: [main]
+    paths-ignore:
+      - "site/data/alerts-sent.json"
 
 permissions:
   contents: write
@@ -35,14 +37,22 @@ jobs:
           python site/build.py
           mkdir -p public
           cp site/standalone.html public/index.html
-      - name: Save fetched data
-        if: github.event_name != 'push'
+      - name: Email price alerts
+        env:
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          ALERT_TO: ${{ secrets.ALERT_TO }}
+        run: python site/alerts.py
+      - name: Save fetched data and sent alerts
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
           git add site/data/offers.json
+          [ -f site/data/alerts-sent.json ] && git add site/data/alerts-sent.json
           git commit -m "Refresh offers $(date -u +%F)" || echo "No changes"
-          git push
+          git pull --rebase origin main && git push
       - uses: actions/upload-pages-artifact@v3
         with:
           path: public

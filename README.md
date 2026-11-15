@@ -25,3 +25,11 @@ Offer rows are `[store, category, name, price, unit, normal_price, discount_perc
 Run locally: `python site/fetch_offers.py && python site/build.py`, then open `site/index.html`.
 
 Prices are copied from the stores' own sites; always check the price in the store.
+
+## Price alerts (hintavahdit)
+
+- **On the page:** open "Hintavahdit", type a product or brand and an optional maximum price. These alerts are saved in your own browser and matching offers get a red border.
+- **By email:** list alerts in `site/data/watches.json` (`{"q": "löfberg", "max": 5.0}`). After every refresh `site/alerts.py` emails new matches once
+  and remembers them in `site/data/alerts-sent.json`. Email settings are repository secrets, never stored in the repo:
+  `SMTP_USER`, `SMTP_PASS` (for Gmail an app password), `ALERT_TO` (comma-separated addresses), and optionally `SMTP_HOST` / `SMTP_PORT`
+  (default `smtp.gmail.com` / `465`).
