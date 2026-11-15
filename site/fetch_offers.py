@@ -207,7 +207,7 @@ def prisma():
                 if not price or not was:
                     continue
                 note = "S-Etukortilla, muuten %s €" % ("%.2f" % (final / 100)).replace(".", ",") if ao and final and ao < final else ""
-                out.append(offer("Prisma", label, p.get("productName", ""), price, "", was, None, note,
+                out.append(offer("Prisma.fi", label, p.get("productName", ""), price, "", was, None, note,
                                  "Prisma.fi-verkkokauppa", "https://www.prisma.fi/tuotteet/%s/%s" % (sid, p.get("slug", ""))))
             if not fresh:
                 break
@@ -222,7 +222,7 @@ def main():
     except Exception:
         pass
     offers, status = [], {}
-    for name, fn in (("Lidl", lidl), ("Kärkkäinen", karkkainen), ("Prisma", prisma)):
+    for name, fn in (("Lidl", lidl), ("Kärkkäinen", karkkainen), ("Prisma.fi", prisma)):
         try:
             got = fn()
             if not got:

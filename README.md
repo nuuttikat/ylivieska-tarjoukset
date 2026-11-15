@@ -7,9 +7,9 @@ This week's offers from Ylivieska stores on one page, searchable by product, sto
 - **Lidl, Kärkkäinen (Ylivieska store stock) and Prisma.fi sale items** are fetched by `site/fetch_offers.py`.
   The GitHub Actions workflow `.github/workflows/refresh.yml` runs it every Monday and Thursday at 06:00 Finnish time,
   rebuilds the page and publishes it on GitHub Pages. It can also be started by hand from the Actions tab.
-- **K-Citymarket Ylivieska, K-Market Mustikka and Halpa-Halli Ylivieska** do not allow automated fetching,
+- **K-Citymarket Ylivieska, K-Market Mustikka, Prisma Ylivieska (S-kaupat) and Halpa-Halli Ylivieska** do not allow automated fetching,
   so their offers are collected in a browser and saved as `site/data/k-ruoka-snapshot.json` and
-  `site/data/halpahalli-snapshot.json` (converted with `k_snapshot.py` and `hh_snapshot.py`).
+  `site/data/halpahalli-snapshot.json` and `site/data/s-kaupat-snapshot.json` (converted with `k_snapshot.py`, `hh_snapshot.py` and `sk_snapshot.py`).
   They change only when a new snapshot is committed.
 
 ## Files

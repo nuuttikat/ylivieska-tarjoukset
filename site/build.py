@@ -6,7 +6,7 @@ from pathlib import Path
 HERE = Path(__file__).parent
 fetched = json.loads((HERE / "data" / "offers.json").read_text(encoding="utf-8"))
 offers = list(fetched["offers"])
-for name in ("k-ruoka-snapshot.json", "halpahalli-snapshot.json"):  # collected in a real browser
+for name in ("k-ruoka-snapshot.json", "s-kaupat-snapshot.json", "halpahalli-snapshot.json"):  # collected in a real browser
     snap = HERE / "data" / name
     if snap.exists():
         offers += json.loads(snap.read_text(encoding="utf-8"))["offers"]
