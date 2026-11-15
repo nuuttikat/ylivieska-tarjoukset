@@ -28,8 +28,19 @@ Prices are copied from the stores' own sites; always check the price in the stor
 
 ## Price alerts (hintavahdit)
 
-- **On the page:** open "Hintavahdit", type a product or brand and an optional maximum price. These alerts are saved in your own browser and matching offers get a red border.
-- **By email:** list alerts in `site/data/watches.json` (`{"q": "löfberg", "max": 5.0}`). After every refresh `site/alerts.py` emails new matches once
-  and remembers them in `site/data/alerts-sent.json`. Email settings are repository secrets, never stored in the repo:
-  `SMTP_USER`, `SMTP_PASS` (for Gmail an app password), `ALERT_TO` (comma-separated addresses), and optionally `SMTP_HOST` / `SMTP_PORT`
-  (default `smtp.gmail.com` / `465`).
+- **On the page:** open "Hintavahdit", type a product or brand and an optional maximum price. Alerts are saved in the
+  viewer's browser and matching offers get a red border.
+- **By email:** anyone can also enter an email address. The page posts the alert to a Google Apps Script web app
+  (`apps-script/Code.gs`) that keeps alerts in a private Google Sheet. The alert starts only after its owner clicks the
+  confirmation link, so nobody can sign someone else up. Once a day the script reads `offers.json` from the published page
+  and emails each confirmed alert's new matches once, with links to stop one or all alerts. Limits: 15 alerts per address,
+  5 new per address per day, 100 new per day in total, plus Google's own daily email quota.
+
+### Setting up the email alerts
+
+1. Create a Google Sheet (for example at sheets.new) and open **Extensions → Apps Script**.
+2. Replace the editor's contents with `apps-script/Code.gs` and save.
+3. Choose the `setup` function and press **Run**, then allow the permissions it asks for (sheet, email, fetching the page,
+   daily trigger).
+4. **Deploy → New deployment → Web app**, execute as **Me**, access **Anyone**. Copy the web app URL.
+5. Put the URL in `site/data/alerts-config.json` as `"api"` and push. The email field then appears on the page.

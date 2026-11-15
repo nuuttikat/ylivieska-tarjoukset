@@ -112,12 +112,13 @@ select{font:inherit;padding:10px 12px;border-radius:10px;border:1px solid var(--
     <form id="watchForm" class="addform" autocomplete="off">
       <label>Tuote tai merkki<input name="q" required maxlength="60" placeholder="esim. löfberg"></label>
       <label>Hinta enintään €<input name="max" inputmode="decimal" maxlength="8" placeholder="esim. 5"></label>
+      <label id="mailField" hidden>Sähköposti (valinnainen)<input name="email" type="email" maxlength="120" placeholder="ilmoitus sähköpostiin" autocomplete="email"></label>
       <button type="submit" class="save">Lisää vahti</button>
       <p class="formnote" id="watchNote" role="status"></p>
     </form>
     <ul class="wlist" id="watchList"></ul>
     <p class="wsub" id="watchOnlyRow" hidden><button type="button" class="chip" id="watchOnly" aria-pressed="false">Näytä vain vahtien osumat</button></p>
-    <p class="wsub" id="mailWatches"></p>
+    <p class="wsub" id="mailInfo"></p>
   </details>
   <details class="add" id="addBox" hidden>
     <summary>Lisää tarjous käsin</summary>
@@ -238,7 +239,8 @@ const norm = s => String(s || "").toLowerCase().normalize("NFKD").replace(/[\u03
 let watches = [];
 try { watches = JSON.parse(localStorage.getItem("ylv-watches") || "[]").filter(w => w && typeof w.q === "string"); } catch (e) {}
 const saveWatches = () => { try { localStorage.setItem("ylv-watches", JSON.stringify(watches)); } catch (e) {} };
-const MAIL_WATCHES = (DATA.watches || []).filter(w => w && typeof w.q === "string");
+const ALERT_API = typeof DATA.alertApi === "string" && /^https:\/\/script\.google\.com\//.test(DATA.alertApi) ? DATA.alertApi : "";
+$("mailField").hidden = !ALERT_API;
 function matches(w, o) {
   const name = norm(o.name + " " + o.store);
   return norm(w.q).split(/\s+/).filter(Boolean).every(x => name.includes(x)) && (!w.max || (o.price && o.price <= w.max));
@@ -254,20 +256,32 @@ function renderWatches() {
     const n = offers.filter(o => matches(w, o)).length;
     return `<li>${esc(w.q)}${w.max ? " alle " + fmt(w.max) + " €" : ""} <strong>${n}</strong><button type="button" data-unwatch="${i}" aria-label="Poista vahti ${esc(w.q)}">×</button></li>`;
   }).join("");
-  $("mailWatches").innerHTML = (MAIL_WATCHES.length
-    ? "Sähköpostivahdit: " + MAIL_WATCHES.map(w => `${esc(w.q)}${w.max ? " alle " + fmt(w.max) + " €" : ""}`).join(", ") + ". "
-    : "") + 'Sähköposti lähtee, kun tarjoukset päivittyvät. <a href="https://github.com/nuuttikat/ylivieska-tarjoukset/edit/main/site/data/watches.json" target="_blank" rel="noopener">Muokkaa sähköpostivahteja</a>';
+  $("mailInfo").textContent = ALERT_API
+    ? "Vahdit tallentuvat tähän selaimeen. Jos annat sähköpostin, saat ensin vahvistusviestin, ja vahvistuksen jälkeen viestin aina kun sopiva tarjous löytyy. Jokaisessa viestissä on linkki vahdin poistamiseen."
+    : "Vahdit tallentuvat tähän selaimeen.";
 }
-$("watchForm").addEventListener("submit", e => {
+let mailBusy = false;
+$("watchForm").addEventListener("submit", async e => {
   e.preventDefault();
-  const f = e.target, q = f.q.value.trim().slice(0, 60);
+  const f = e.target, q = f.q.value.trim().slice(0, 60), email = (f.email.value || "").trim();
   const max = Number(String(f.max.value).replace(",", ".").replace(/[^0-9.]/g, "")) || null;
-  if (!q) return;
-  watches.push({q, max: max ? Math.round(max * 100) / 100 : null});
-  saveWatches(); f.q.value = ""; f.max.value = "";
-  const n = offers.filter(o => matches(watches[watches.length - 1], o)).length;
-  $("watchNote").textContent = n ? "Vahti löysi " + n + " tarjousta. Ne näkyvät punaisella reunuksella." : "Ei osumia juuri nyt. Vahti näyttää osumat, kun tarjoukset päivittyvät.";
+  if (q.length < 2) { $("watchNote").textContent = "Kirjoita vähintään kaksi merkkiä."; return; }
+  if (email && !f.email.checkValidity()) { $("watchNote").textContent = "Tarkista sähköpostiosoite."; return; }
+  const w = {q, max: max ? Math.round(max * 100) / 100 : null};
+  watches.push(w); saveWatches(); f.q.value = ""; f.max.value = "";
+  const n = offers.filter(o => matches(w, o)).length;
+  let note = n ? "Vahti löysi " + n + " tarjousta. Ne näkyvät punaisella reunuksella." : "Ei osumia juuri nyt.";
   renderWatches(); render();
+  if (!email || !ALERT_API || mailBusy) { $("watchNote").textContent = note; return; }
+  mailBusy = true; f.querySelector(".save").disabled = true; $("watchNote").textContent = note + " Lähetetään…";
+  try {
+    // A simple form post; the reply isn't readable cross-site, so success means "sent".
+    await fetch(ALERT_API, {method: "POST", mode: "no-cors", body: new URLSearchParams({email, q: w.q, max: w.max || ""})});
+    $("watchNote").textContent = note + " Lähetimme vahvistusviestin osoitteeseen " + email + ". Sähköposti-ilmoitukset alkavat, kun vahvistat vahdin.";
+  } catch (err) {
+    $("watchNote").textContent = note + " Sähköpostivahdin tallennus ei onnistunut. Kokeile myöhemmin uudelleen.";
+  }
+  mailBusy = false; f.querySelector(".save").disabled = false;
 });
 $("watchList").addEventListener("click", e => {
   const b = e.target.closest("[data-unwatch]"); if (!b) return;
