@@ -14,4 +14,9 @@ data = {"fetched": fetched["fetched"], "offers": offers}
 page = (HERE / "template.html").read_text(encoding="utf-8").replace(
     "__DATA__", json.dumps(data, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/"))
 (HERE / "index.html").write_text(page, encoding="utf-8")
+# The GitHub Pages copy needs its own document head (the Claude page adds one itself).
+(HERE / "standalone.html").write_text(
+    '<!doctype html><html lang="fi"><head><meta charset="utf-8">'
+    '<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">'
+    '<style>body{margin:0}</style></head><body>' + page + '</body></html>', encoding="utf-8")
 print(len(offers), "offers,", len(page) // 1024, "KB")

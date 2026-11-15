@@ -34,7 +34,7 @@ jobs:
         run: |
           python site/build.py
           mkdir -p public
-          cp site/index.html public/index.html
+          cp site/standalone.html public/index.html
       - name: Save fetched data
         if: github.event_name != 'push'
         run: |
