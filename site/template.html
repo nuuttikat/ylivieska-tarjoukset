@@ -239,7 +239,9 @@ const norm = s => String(s || "").toLowerCase().normalize("NFKD").replace(/[\u03
 let watches = [];
 try { watches = JSON.parse(localStorage.getItem("ylv-watches") || "[]").filter(w => w && typeof w.q === "string"); } catch (e) {}
 const saveWatches = () => { try { localStorage.setItem("ylv-watches", JSON.stringify(watches)); } catch (e) {} };
-const ALERT_API = typeof DATA.alertApi === "string" && /^https:\/\/script\.google\.com\//.test(DATA.alertApi) ? DATA.alertApi : "";
+// Inside Claude the page is sandboxed and can't reach the alert service, so email alerts live on the family page only.
+const IN_CLAUDE = !!(window.claude && window.claude.use);
+const ALERT_API = !IN_CLAUDE && typeof DATA.alertApi === "string" && /^https:\/\/script\.google\.com\//.test(DATA.alertApi) ? DATA.alertApi : "";
 $("mailField").hidden = !ALERT_API;
 function matches(w, o) {
   const name = norm(o.name + " " + o.store);
@@ -258,7 +260,9 @@ function renderWatches() {
   }).join("");
   $("mailInfo").textContent = ALERT_API
     ? "Vahdit tallentuvat tähän selaimeen. Jos annat sähköpostin, saat ensin vahvistusviestin, ja vahvistuksen jälkeen viestin aina kun sopiva tarjous löytyy. Jokaisessa viestissä on linkki vahdin poistamiseen."
-    : "Vahdit tallentuvat tähän selaimeen.";
+    : IN_CLAUDE && DATA.alertApi
+      ? "Vahdit tallentuvat tähän selaimeen. Sähköposti-ilmoitukset saat perhesivulta: nuuttikat.github.io/ylivieska-tarjoukset"
+      : "Vahdit tallentuvat tähän selaimeen.";
 }
 let mailBusy = false;
 $("watchForm").addEventListener("submit", async e => {
