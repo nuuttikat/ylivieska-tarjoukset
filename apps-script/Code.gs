@@ -8,7 +8,7 @@
  *   new matches once. Every email has links to stop one alert or all of them.
  * Emails and alerts live only in this Sheet, never in the public repository.
  *
- * Setup: see README.md, section "Email alerts".
+ * Setup: see README.md, section "Setting up the email alerts".
  */
 const PAGE = 'https://nuuttikat.github.io/ylivieska-tarjoukset/';
 const DATA_URL = PAGE + 'offers.json';
@@ -24,8 +24,18 @@ function setup() {
   ScriptApp.newTrigger('checkAlerts').timeBased().everyDays(1).atHour(7).inTimezone('Europe/Helsinki').create();
 }
 
+// Works both as a standalone script (creates its own "Hintavahdit" Sheet) and inside a Sheet.
+function ss_() {
+  const props = PropertiesService.getScriptProperties();
+  const id = props.getProperty('SHEET_ID');
+  if (id) return SpreadsheetApp.openById(id);
+  const ss = SpreadsheetApp.getActive() || SpreadsheetApp.create('Hintavahdit');
+  props.setProperty('SHEET_ID', ss.getId());
+  return ss;
+}
+
 function sheet_(name, header) {
-  const ss = SpreadsheetApp.getActive();
+  const ss = ss_();
   let sh = ss.getSheetByName(name);
   if (!sh) { sh = ss.insertSheet(name); sh.appendRow(header); }
   return sh;

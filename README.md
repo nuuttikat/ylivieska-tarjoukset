@@ -38,8 +38,9 @@ Prices are copied from the stores' own sites; always check the price in the stor
 
 ### Setting up the email alerts
 
-1. Create a Google Sheet (for example at sheets.new) and open **Extensions → Apps Script**.
-2. Replace the editor's contents with `apps-script/Code.gs` and save.
+1. Open a new Apps Script project (script.new) and replace the editor's contents with `apps-script/Code.gs`, then save.
+   The script creates its own private "Hintavahdit" Sheet the first time it runs.
+2. (Or paste it into a Sheet's **Extensions → Apps Script**; then it uses that Sheet.)
 3. Choose the `setup` function and press **Run**, then allow the permissions it asks for (sheet, email, fetching the page,
    daily trigger).
 4. **Deploy → New deployment → Web app**, execute as **Me**, access **Anyone**. Copy the web app URL.
