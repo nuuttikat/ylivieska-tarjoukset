@@ -1,0 +1,277 @@
+<title>Ylivieskan tarjoukset</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap">
+<style>
+/* Layout: a sticky filter shelf over a grid of shelf-edge price tags (hyllynreunatarrat). */
+:root{
+  --bg:#f3f5f8; --surface:#ffffff; --ink:#14213a; --muted:#5c6880; --line:#d9dee8;
+  --tag:#ffd94a; --tag-ink:#14213a; --sale:#d22d2d; --chip:#e7ebf2; --chip-on:#14213a; --chip-on-ink:#ffffff;
+  --display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  --body:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0f1522; --surface:#18202f; --ink:#e8edf6; --muted:#9aa6bd; --line:#2a3446;
+  --tag:#f2cc3d; --tag-ink:#14213a; --sale:#ff6b6b; --chip:#232d40; --chip-on:#e8edf6; --chip-on-ink:#0f1522; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f1522; --surface:#18202f; --ink:#e8edf6; --muted:#9aa6bd; --line:#2a3446;
+  --tag:#f2cc3d; --tag-ink:#14213a; --sale:#ff6b6b; --chip:#232d40; --chip-on:#e8edf6; --chip-on-ink:#0f1522; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.45}
+.wrap{max-width:1180px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header.top{padding-block:28px 12px}
+h1{font-family:var(--display);font-weight:800;font-size:clamp(34px,6vw,52px);line-height:1;margin:0;letter-spacing:.2px;text-wrap:balance}
+.sub{color:var(--muted);margin:8px 0 0;max-width:65ch}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.shelf{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);border-bottom:1px solid var(--line);padding-block:12px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.row+.row{margin-top:10px}
+.search{flex:1 1 260px;min-width:0;display:flex}
+.search input{width:100%;font:inherit;font-size:16px;padding:11px 14px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink)}
+select{font:inherit;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);max-width:100%}
+.label{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600;margin-right:4px}
+.chip{font:inherit;font-size:14px;border:0;border-radius:999px;padding:7px 13px;background:var(--chip);color:var(--ink);cursor:pointer;display:inline-flex;gap:6px;align-items:center}
+.chip[aria-pressed="true"]{background:var(--chip-on);color:var(--chip-on-ink)}
+.chip:disabled{opacity:.55;cursor:not-allowed}
+.chip .n{font-variant-numeric:tabular-nums;opacity:.7;font-size:12px}
+.chip .soon{font-size:11px;text-transform:uppercase;letter-spacing:.06em}
+:focus-visible{outline:3px solid var(--tag);outline-offset:2px}
+.cats{overflow-x:auto;flex-wrap:nowrap;padding-bottom:4px;scrollbar-width:thin}
+.cats .chip{flex:0 0 auto}
+.meta{color:var(--muted);font-size:13px;padding-block:14px 6px;display:flex;flex-wrap:wrap;gap:6px 16px;justify-content:space-between}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px;padding-block:6px 40px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:6px;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+.card .head{display:flex;justify-content:space-between;gap:8px;padding:10px 12px 0;font-size:12px;color:var(--muted)}
+.store{font-weight:600;color:var(--ink)}
+.name{padding:6px 12px 10px;font-weight:500;flex:1;overflow-wrap:anywhere}
+.tag{background:var(--tag);color:var(--tag-ink);padding:8px 12px 10px;display:grid;grid-template-columns:1fr auto;align-items:end;gap:4px 8px;border-top:2px dashed rgba(20,33,58,.25)}
+.price{font-family:var(--display);font-weight:800;font-size:40px;line-height:.95;font-variant-numeric:tabular-nums;white-space:nowrap}
+.price small{font-size:18px;font-weight:700;margin-left:2px}
+.price.none{font-size:26px}
+.unit{font-size:12px;font-weight:600}
+.was{font-size:12px;text-decoration:line-through;opacity:.75;text-align:right}
+.pct{font-family:var(--display);font-weight:700;font-size:20px;background:var(--sale);color:#fff;border-radius:4px;padding:1px 7px;justify-self:end;font-variant-numeric:tabular-nums}
+.note{grid-column:1/-1;font-size:12px;font-weight:600}
+.foot{padding:8px 12px;font-size:12px;color:var(--muted);border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:8px}
+.empty{padding:40px 0;color:var(--muted);text-align:center}
+.status{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:14px 16px;margin-block:6px 0;font-size:14px}
+.status ul{margin:6px 0 0;padding-left:18px}
+.name a{color:inherit;text-decoration:none}
+.name a:hover{text-decoration:underline}
+.more{display:block;margin:0 auto 28px;font:inherit;font-weight:600;padding:12px 22px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
+.status li{margin-block:2px}
+.add{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:10px 14px;margin-block:4px 10px}
+.add summary{cursor:pointer;font-weight:600}
+.addform{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px 12px;margin-top:12px;align-items:end}
+.addform label{display:grid;gap:4px;font-size:13px;color:var(--muted);min-width:0}
+.addform input,.addform select{font:inherit;font-size:16px;padding:9px 11px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink);width:100%;min-width:0}
+.save{font:inherit;font-weight:600;padding:10px 16px;border-radius:8px;border:0;background:var(--chip-on);color:var(--chip-on-ink);cursor:pointer}
+.save:disabled{opacity:.6;cursor:progress}
+.formnote{grid-column:1/-1;margin:0;font-size:13px;color:var(--muted);min-height:1.2em}
+.del{font:inherit;font-size:12px;border:0;background:none;color:var(--muted);text-decoration:underline;cursor:pointer;padding:0}
+@media (max-width:520px){.price{font-size:34px}.grid{grid-template-columns:1fr 1fr;gap:10px}.name{font-size:14px}}
+@media (max-width:360px){.grid{grid-template-columns:1fr}}
+@media (prefers-reduced-motion:no-preference){.card{transition:transform .12s}.card:hover{transform:translateY(-2px)}}
+</style>
+
+<header class="top wrap">
+  <h1>Ylivieskan tarjoukset</h1>
+  <p class="sub">Tämän viikon tarjoukset Ylivieskan kaupoista yhdellä sivulla. Hae tuotteella, rajaa kaupan tai tuoteryhmän mukaan.</p>
+</header>
+
+<div class="shelf">
+  <div class="wrap">
+    <div class="row">
+      <label class="search" for="q"><input id="q" type="search" placeholder="Hae tuotetta, esim. kahvi tai jauheliha" autocomplete="off"></label>
+      <select id="sort" aria-label="Järjestys">
+        <option value="pct">Suurin alennus ensin</option>
+        <option value="low">Halvin ensin</option>
+        <option value="az">Aakkosjärjestys</option>
+      </select>
+    </div>
+    <div class="row" id="stores"><span class="label">Kauppa</span></div>
+    <div class="row cats" id="cats"><span class="label">Tuoteryhmä</span></div>
+  </div>
+</div>
+
+<main class="wrap">
+  <div class="meta"><span id="count"></span><span id="fetched"></span></div>
+  <details class="add" id="addBox" hidden>
+    <summary>Lisää tarjous käsin</summary>
+    <form id="addForm" class="addform" autocomplete="off">
+      <label>Kauppa<input name="store" list="storeList" required maxlength="40"></label>
+      <datalist id="storeList"></datalist>
+      <label>Tuote<input name="name" required maxlength="120"></label>
+      <label>Hinta €<input name="price" inputmode="decimal" required maxlength="10" placeholder="2,99"></label>
+      <label>Normaalihinta €<input name="was" inputmode="decimal" maxlength="10" placeholder="valinnainen"></label>
+      <label>Tuoteryhmä<select name="cat"></select></label>
+      <label>Voimassa<input name="valid" maxlength="40" placeholder="esim. 22.11. asti"></label>
+      <button type="submit" class="save">Tallenna</button>
+      <p class="formnote" id="addNote" role="status"></p>
+    </form>
+  </details>
+  <div class="grid" id="grid"></div>
+  <button class="more" id="more" type="button" hidden></button>
+  <div class="empty" id="empty" hidden>Ei tarjouksia näillä rajauksilla. Kokeile toista hakusanaa tai poista rajauksia.</div>
+  <section class="status" aria-label="Kauppojen tilanne">
+    <strong>Mistä tiedot tulevat</strong>
+    <ul id="sources"></ul>
+  </section>
+</main>
+
+<script>
+const DATA = __DATA__;
+
+const STORE_ORDER = ["K-Citymarket", "K-Market Mustikka", "Prisma", "Lidl", "Kärkkäinen", "Halpa-Halli"];
+const PENDING = [];
+const CAT_ORDER = ["Hedelmät ja vihannekset","Liha ja kala","Maito ja juusto","Leivät ja leivonnaiset","Valmisruoat ja pakasteet","Kuivat, mausteet ja kastikkeet","Makeiset ja naposteltavat","Juomat ja kahvi","Ruoka, muut","Lemmikit","Lapset ja lelut","Koti, keittiö ja siivous","Vaatteet ja kengät","Kauneus ja terveys","Urheilu ja vapaa-aika","Elektroniikka ja kodinkoneet","Työkalut, remontti ja autoilu","Piha, kukat ja puutarha","Kirjat ja toimisto","Muut"];
+const SOURCE_NOTES = {
+  "K-Citymarket": "K-Citymarket Ylivieskan edut K-Ruoka-palvelusta. Haetaan selaimella, ei päivity itsestään.",
+  "K-Market Mustikka": "K-Market Mustikan edut K-Ruoka-palvelusta. Haetaan selaimella, ei päivity itsestään.",
+  "Prisma": "Prisma.fi-verkkokaupan alennustuotteet. Prisma Ylivieskan ruokatarjoukset puuttuvat vielä.",
+  "Lidl": "Lidlin viikkotarjoukset, samat koko maassa.",
+  "Kärkkäinen": "Kampanjatuotteet, jotka ovat saatavilla Ylivieskan myymälästä.",
+  "Halpa-Halli": "Arjen edulliset-, Black Friday- ja Outlet-tuotteet, jotka ovat saatavilla Ylivieskan myymälästä. Haetaan selaimella, ei päivity itsestään."
+};
+
+const base = DATA.offers.map(o => ({store:o[0], cat:o[1], name:o[2], price:o[3], unit:o[4], was:o[5], pct:o[6], note:o[7], valid:o[8], url:o[9], key:(o[2] + " " + o[0]).toLowerCase()}));
+let manual = [], offers = base, storeCount = {}, stores = [], canWrite = false;
+
+const PAGE = 120;
+const state = {q:"", stores:new Set(), cat:"", sort:"pct", limit:PAGE};
+try { const s = JSON.parse(localStorage.getItem("ylv-filters") || "null"); if (s) { state.sort = s.sort || "pct"; if (CAT_ORDER.includes(s.cat)) state.cat = s.cat; } } catch (e) {}
+const save = () => { try { localStorage.setItem("ylv-filters", JSON.stringify({sort:state.sort, cat:state.cat})); } catch (e) {} };
+
+const $ = id => document.getElementById(id);
+const storesEl = $("stores"), catsEl = $("cats"), grid = $("grid");
+const fmt = n => n.toFixed(2).replace(".", ",");
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+// Offers the family added by hand come from the page's shared database and are merged in here.
+function recount() {
+  offers = base.concat(manual);
+  storeCount = {}; offers.forEach(o => storeCount[o.store] = (storeCount[o.store] || 0) + 1);
+  const next = STORE_ORDER.filter(s => storeCount[s]).concat(Object.keys(storeCount).filter(s => !STORE_ORDER.includes(s)).sort());
+  next.forEach(s => { if (!stores.includes(s)) state.stores.add(s); });
+  stores = next;
+}
+function chip(label, pressed, onClick, extra) {
+  const b = document.createElement("button");
+  b.className = "chip"; b.type = "button"; b.setAttribute("aria-pressed", pressed);
+  b.innerHTML = esc(label) + (extra || ""); b.addEventListener("click", onClick); return b;
+}
+function renderStores() {
+  storesEl.querySelectorAll(".chip").forEach(c => c.remove());
+  for (const s of stores) {
+    storesEl.appendChild(chip(s, state.stores.has(s), () => {
+      state.stores.has(s) ? state.stores.delete(s) : state.stores.add(s); state.limit = PAGE; renderStores(); renderCats(); render();
+    }, ` <span class="n">${storeCount[s]}</span>`));
+  }
+  for (const s of PENDING) { const b = chip(s, false, () => {}, ` <span class="soon">tulossa</span>`); b.disabled = true; storesEl.appendChild(b); }
+}
+function renderCats() {
+  catsEl.querySelectorAll(".chip").forEach(c => c.remove());
+  const counts = {}; offers.forEach(o => { if (state.stores.has(o.store)) counts[o.cat] = (counts[o.cat] || 0) + 1; });
+  catsEl.appendChild(chip("Kaikki", state.cat === "", () => { state.cat = ""; state.limit = PAGE; save(); renderCats(); render(); }));
+  for (const g of CAT_ORDER) {
+    if (!counts[g]) continue;
+    catsEl.appendChild(chip(g, state.cat === g, () => { state.cat = state.cat === g ? "" : g; state.limit = PAGE; save(); renderCats(); render(); }, ` <span class="n">${counts[g]}</span>`));
+  }
+}
+function card(o) {
+  const priceHtml = o.price
+    ? `<div class="price">${fmt(o.price).replace(/,(\d\d)$/, ",<small>$1</small>")}<small>€</small></div>`
+    : `<div class="price none">${o.pct ? "−" + o.pct + " %" : "Tarjous"}</div>`;
+  const name = o.url ? `<a href="${esc(o.url)}" target="_blank" rel="noopener">${esc(o.name)}</a>` : esc(o.name);
+  return `<article class="card">
+    <div class="head"><span class="store">${esc(o.store)}</span><span>${esc(o.cat)}</span></div>
+    <div class="name">${name}</div>
+    <div class="tag">
+      <div>${priceHtml}${o.unit ? `<div class="unit">${esc(o.unit)}</div>` : ""}</div>
+      <div style="display:grid;gap:4px;justify-items:end">${o.pct && o.price ? `<span class="pct">−${o.pct}%</span>` : ""}${o.was ? `<span class="was">${fmt(o.was)} €</span>` : ""}</div>
+      ${o.note ? `<div class="note">${esc(o.note)}</div>` : ""}
+    </div>
+    ${o.valid || o.id ? `<div class="foot"><span>${esc(o.valid)}</span>${o.id && canWrite ? `<button class="del" type="button" data-del="${esc(o.id)}">Poista</button>` : ""}</div>` : ""}
+  </article>`;
+}
+function render() {
+  const words = state.q.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  let list = offers.filter(o => state.stores.has(o.store) && (!state.cat || o.cat === state.cat) && words.every(w => o.key.includes(w)));
+  if (state.sort === "pct") list.sort((a, b) => (b.pct || 0) - (a.pct || 0) || a.name.localeCompare(b.name, "fi"));
+  if (state.sort === "low") list.sort((a, b) => (a.price ?? 1e9) - (b.price ?? 1e9));
+  if (state.sort === "az") list.sort((a, b) => a.name.localeCompare(b.name, "fi"));
+  grid.innerHTML = list.slice(0, state.limit).map(card).join("");
+  $("empty").hidden = list.length > 0;
+  $("count").textContent = list.length + " tarjousta";
+  const left = list.length - state.limit;
+  $("more").hidden = left <= 0;
+  if (left > 0) $("more").textContent = "Näytä lisää (" + left + " jäljellä)";
+}
+function day(iso) { const d = new Date(iso); return isNaN(d) ? "" : d.toLocaleDateString("fi-FI", {weekday:"short", day:"numeric", month:"numeric", year:"numeric"}); }
+$("fetched").textContent = "Hinnat haettu " + day(DATA.fetched) + ". Tarkista hinta kaupassa.";
+function renderSources() {
+  $("sources").innerHTML = [...stores, ...PENDING].map(s => `<li><strong>${esc(s)}</strong>${storeCount[s] ? " (" + storeCount[s] + ")" : ""}: ${esc(SOURCE_NOTES[s] || "Lisätty käsin.")}</li>`).join("");
+  $("storeList").innerHTML = stores.map(s => `<option value="${esc(s)}">`).join("");
+}
+function refresh() { recount(); renderStores(); renderCats(); renderSources(); render(); }
+$("more").addEventListener("click", () => { state.limit += PAGE; render(); });
+$("q").addEventListener("input", e => { state.q = e.target.value; state.limit = PAGE; render(); });
+$("sort").value = state.sort;
+$("sort").addEventListener("change", e => { state.sort = e.target.value; state.limit = PAGE; save(); render(); });
+refresh();
+
+// Manual offers: shared by everyone who can open the page, stored in the page's database.
+(async () => {
+  if (!window.claude || !window.claude.use) return;
+  const db = await window.claude.use("db");
+  if (!db) return;
+  const user = await window.claude.use("user");
+  let allowed = null;
+  try { allowed = user ? await user.can("data.write") : null; } catch (e) {}
+  canWrite = allowed !== false;
+  const form = $("addForm"), note = $("addNote"), col = db.collection("manual");
+  form.cat.innerHTML = CAT_ORDER.map(c => `<option>${esc(c)}</option>`).join(""); form.cat.value = "Muut";
+  $("addBox").hidden = !canWrite;
+  const num = v => { const n = Number(String(v == null ? "" : v).replace(",", ".").replace(/[^0-9.]/g, "")); return isFinite(n) && n > 0 ? Math.round(n * 100) / 100 : null; };
+  const text = (v, max) => typeof v === "string" ? v.trim().slice(0, max) : "";
+  function fromDoc(d) {
+    const x = d.data() || {}, name = text(x.name, 120), store = text(x.store, 40), price = num(x.price);
+    if (!name || !store || !price) return null;
+    const w = num(x.was), was = w && w > price ? w : null;
+    return {id:d.id, store, cat:CAT_ORDER.includes(x.cat) ? x.cat : "Muut", name, price, unit:"", was, pct:was ? Math.round((1 - price / was) * 100) : null,
+            note:"Lisätty käsin", valid:text(x.valid, 40), url:"", key:(name + " " + store).toLowerCase()};
+  }
+  const slow = setTimeout(() => { note.textContent = "Käsin lisättyjä tarjouksia ei saatu vielä ladattua."; }, 10000);
+  col.onSnapshot(snap => {
+    if (!snap.metadata.fromCache) { clearTimeout(slow); if (note.textContent.startsWith("Käsin")) note.textContent = ""; }
+    manual = snap.docs.map(fromDoc).filter(Boolean);
+    refresh();
+  }, () => { clearTimeout(slow); note.textContent = "Käsin lisättyjä tarjouksia ei voitu ladata."; });
+
+  let saving = false;
+  form.addEventListener("submit", async e => {
+    e.preventDefault();
+    if (saving) return;
+    const store = text(form.store.value, 40), name = text(form.name.value, 120), price = num(form.price.value), was = num(form.was.value);
+    if (!store || !name || !price) { note.textContent = "Täytä kauppa, tuote ja hinta."; return; }
+    saving = true; form.querySelector(".save").disabled = true; note.textContent = "Tallennetaan…";
+    try {
+      await col.add({store, name, price, was:was || null, cat:form.cat.value, valid:text(form.valid.value, 40), added:new Date().toISOString()});
+      note.textContent = "Tallennettu. Tarjous näkyy nyt kaikille, joilla on pääsy sivulle.";
+      form.name.value = ""; form.price.value = ""; form.was.value = "";
+    } catch (err) {
+      if (err && err.code === "invalid_argument") { note.textContent = "Sinulla ei ole oikeutta lisätä tarjouksia tälle sivulle."; canWrite = false; }
+      else if (err && err.code === "quota_exceeded") note.textContent = "Tallennustila on täynnä. Poista vanhoja käsin lisättyjä tarjouksia.";
+      else note.textContent = "Tallennus ei onnistunut. Yritä hetken päästä uudelleen.";
+    }
+    saving = false; form.querySelector(".save").disabled = false;
+  });
+  grid.addEventListener("click", async e => {
+    const b = e.target.closest("[data-del]");
+    if (!b) return;
+    if (!b.dataset.armed) { b.dataset.armed = "1"; b.textContent = "Vahvista poisto"; return; }
+    b.disabled = true;
+    try { await db.doc("manual/" + b.dataset.del).delete(); } catch (err) { b.disabled = false; b.textContent = "Poisto ei onnistunut"; }
+  });
+})();
+</script>

@@ -1,0 +1,17 @@
+#!/usr/bin/env python3
+"""Merge the fetched offers and the K-Ruoka snapshot into one self-contained index.html."""
+import json
+from pathlib import Path
+
+HERE = Path(__file__).parent
+fetched = json.loads((HERE / "data" / "offers.json").read_text(encoding="utf-8"))
+offers = list(fetched["offers"])
+for name in ("k-ruoka-snapshot.json", "halpahalli-snapshot.json"):  # collected in a real browser
+    snap = HERE / "data" / name
+    if snap.exists():
+        offers += json.loads(snap.read_text(encoding="utf-8"))["offers"]
+data = {"fetched": fetched["fetched"], "offers": offers}
+page = (HERE / "template.html").read_text(encoding="utf-8").replace(
+    "__DATA__", json.dumps(data, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/"))
+(HERE / "index.html").write_text(page, encoding="utf-8")
+print(len(offers), "offers,", len(page) // 1024, "KB")
