@@ -14,7 +14,9 @@ const PAGE = 'https://nuuttikat.github.io/ylivieska-tarjoukset/';
 const DATA_URL = PAGE + 'offers.json';
 const MAX_ALERTS_PER_EMAIL = 15;   // active + pending
 const MAX_NEW_PER_EMAIL_PER_DAY = 5;
-const MAX_NEW_TOTAL_PER_DAY = 100;
+const MAX_NEW_TOTAL_PER_DAY = 30;   // confirmation emails per day, for everyone together
+const QUOTA_RESERVE = 50;           // keep this much of Google's daily email quota for the alert emails
+const PENDING_DAYS = 3;             // an unconfirmed alert's link stops working after this
 const ALERT_COLS = ['id', 'email', 'q', 'max', 'status', 'token', 'created', 'confirmed'];
 
 function setup() {
@@ -60,6 +62,10 @@ function matches_(a, o) {
 
 function eur_(x) { return x.toFixed(2).replace('.', ',') + ' €'; }
 
+function esc_(s) {
+  return String(s).replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
+}
+
 function json_(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
 }
@@ -70,9 +76,13 @@ function doPost(e) {
   try {
     const p = (e && e.parameter) || {};
     const email = String(p.email || '').trim().toLowerCase();
-    const q = String(p.q || '').trim().slice(0, 60);
+    // Product words only: letters, digits and a little punctuation. This keeps links, addresses and
+    // spreadsheet formulas (=..., +..., @...) out of the Sheet and out of the confirmation email,
+    // so nobody can use the form to send their own message to someone else.
+    const q = String(p.q || '').replace(/\s+/g, ' ').trim().slice(0, 60);
+    if (!/^[\p{L}\p{N}][\p{L}\p{N} .,%/()-]*$/u.test(q) || /https?|www|\.[a-z]{2,}\b/i.test(q)) return json_({ok: false, error: 'q'});
     const max = p.max ? Math.round(Number(String(p.max).replace(',', '.')) * 100) / 100 : null;
-    if (!/^[^\s@<>]+@[^\s@<>]+\.[a-z]{2,}$/.test(email) || email.length > 120) return json_({ok: false, error: 'email'});
+    if (!/^[a-z0-9][a-z0-9._%+-]*@[a-z0-9-]+(\.[a-z0-9-]+)*\.[a-z]{2,}$/.test(email) || email.length > 120) return json_({ok: false, error: 'email'});
     if (q.length < 2) return json_({ok: false, error: 'q'});
     if (max !== null && !(max > 0 && max < 100000)) return json_({ok: false, error: 'max'});
     const all = rows_();
@@ -81,7 +91,7 @@ function doPost(e) {
     if (mine.length >= MAX_ALERTS_PER_EMAIL) return json_({ok: false, error: 'limit'});
     if (all.filter(r => r.email === email && r.created && r.created.getTime() > dayAgo).length >= MAX_NEW_PER_EMAIL_PER_DAY) return json_({ok: false, error: 'limit'});
     if (all.filter(r => r.created && r.created.getTime() > dayAgo).length >= MAX_NEW_TOTAL_PER_DAY) return json_({ok: false, error: 'busy'});
-    if (MailApp.getRemainingDailyQuota() < 5) return json_({ok: false, error: 'busy'});
+    if (MailApp.getRemainingDailyQuota() < QUOTA_RESERVE) return json_({ok: false, error: 'busy'});
     const token = Utilities.getUuid();
     const id = Utilities.getUuid().slice(0, 8);
     sheet_('alerts', ALERT_COLS).appendRow([id, email, q, max === null ? '' : max, 'pending', token, new Date(), '']);
@@ -106,7 +116,8 @@ function doGet(e) {
   const all = rows_();
   const hit = all.find(r => p.t && r.token === p.t);
   let msg = 'Linkki ei ole voimassa.';
-  if (hit && p.a === 'confirm' && hit.status !== 'stopped') {
+  const fresh = hit && hit.created && Date.now() - hit.created.getTime() < PENDING_DAYS * 24 * 3600 * 1000;
+  if (hit && p.a === 'confirm' && (hit.status === 'active' || (hit.status === 'pending' && fresh))) {
     sh.getRange(hit.row, 5).setValue('active');
     sh.getRange(hit.row, 8).setValue(new Date());
     msg = 'Hintavahti "' + hit.q + '" on nyt päällä. Saat sähköpostia, kun sopiva tarjous löytyy.';
@@ -119,7 +130,7 @@ function doGet(e) {
   }
   return HtmlService.createHtmlOutput('<meta name="viewport" content="width=device-width,initial-scale=1">' +
     '<div style="font:16px/1.5 system-ui,sans-serif;max-width:32rem;margin:3rem auto;padding:0 16px">' +
-    '<h1 style="font-size:1.4rem">Ylivieskan tarjoukset</h1><p>' + msg.replace(/</g, '&lt;') + '</p>' +
+    '<h1 style="font-size:1.4rem">Ylivieskan tarjoukset</h1><p>' + esc_(msg) + '</p>' +
     '<p><a href="' + PAGE + '">Takaisin tarjouksiin</a></p></div>').setTitle('Hintavahti');
 }
 
@@ -140,7 +151,7 @@ function checkAlerts() {
     });
   });
   Object.keys(byEmail).forEach(email => {
-    if (MailApp.getRemainingDailyQuota() < 1) return;
+    if (MailApp.getRemainingDailyQuota() < 1) return;  // the rest are sent on the next run
     const items = byEmail[email];
     const lines = items.slice(0, 40).map(x => '- ' + x.o[0] + ': ' + x.o[2] + ' ' + eur_(x.o[3]) +
       (x.o[5] ? ' (ennen ' + eur_(x.o[5]) + ')' : '') + (x.o[8] ? ', ' + x.o[8] : '') + '\n  ' + (x.o[9] || PAGE));

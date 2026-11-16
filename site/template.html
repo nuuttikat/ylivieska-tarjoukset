@@ -207,7 +207,7 @@ function card(o) {
   const priceHtml = o.price
     ? `<div class="price">${fmt(o.price).replace(/,(\d\d)$/, ",<small>$1</small>")}<small>€</small></div>`
     : `<div class="price none">${o.pct ? "−" + o.pct + " %" : "Tarjous"}</div>`;
-  const name = o.url ? `<a href="${esc(o.url)}" target="_blank" rel="noopener">${esc(o.name)}</a>` : esc(o.name);
+  const name = /^https:\/\//i.test(o.url || "") ? `<a href="${esc(o.url)}" target="_blank" rel="noopener">${esc(o.name)}</a>` : esc(o.name);
   const hit = isHit(o);
   return `<article class="card${hit ? " hit" : ""}">
     <div class="head"><span class="store">${esc(o.store)}</span><span>${hit ? '<span class="hitbadge">Vahti</span>' : esc(o.cat)}</span></div>
